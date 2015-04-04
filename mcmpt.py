@@ -52,13 +52,12 @@ def updateM():
     mcmptFileJson = json.dumps(mcmptFileDict)
     mcmptFile = open(mcmptPath + "mcmpt.json",'w')
     mcmptFile.write(mcmptFileJson)
-    mcmptFile.close();
+    mcmptFile.close()
     mcVersionsJson = webGetText(mcmptRepoURL + "mcVer.json")
     if not mcVersionsJson :
         print("Failed to download mcVer.json. This suggests the mcmpt repository or github is down.")
         sys.exit()
 
-    print(mcVersionsJson)
     mcVersionsDict = json.loads(mcVersionsJson);
     print("Minecraft versions found:")
     for mcVer in mcVersionsDict:
@@ -66,6 +65,43 @@ def updateM():
     mcVersionsFile = open(mcmptPath + "mcVer.json",'w')
     mcVersionsFile.write(mcVersionsJson)
     mcVersionsFile.close()
+
+    for mcVer in mcVersionsDict:
+        os.makedirs(mcmptPath + mcVer + "/");
+        print("Downloading mod list for Minecraft version " + mcVer)
+        modListJson = webGetText(mcmptRepoURL + mcVer + ".json")
+        modListDict = json.loads(modListJson)
+        realModListDict = []
+        print("Mod list for Minecraft version " + mcVer)
+        for mod in modListDict:
+            print(mod + " at " + modListDict[mod])
+            print("Downloading json file for " + mod)
+            modJson = webGetText(modListDict[mod])
+            if not modJson :
+                print("Failed to download mod json file. Please report this to the mod author or mod json file maintainer.")
+            else :
+                print("Downloaded json file for " + mod)
+                modDict = []
+                try:
+                    modDict = json.loads(modJson)
+                except ValueError:
+                    print("Error with mod json file. Please report this to the mod author or mod json file maintainer.")
+                else:
+                    modFile = open(mcmptPath + mcVer + "/" + mod + ".json",'w')
+                    modFile.write(modJson)
+                    modFile.close()
+                    realModListDict.append(mod)
+    realModListJson = json.dumps(realModListDict)
+    realModListFile = open(mcmptPath + mcVer + ".json",'w')
+    realModListFile.write(realModListJson)
+
+
+
+
+
+
+
+
 
 
 
@@ -83,16 +119,17 @@ def installed():
         return False
     return True
 
+# Woe to the person who attempts to use this to download a mod.
 def webGetText(url) :
     data = ""
     try :
         data = urllib2.urlopen(url)
     except urllib2.URLError as errorUrl:
-        data = False
         print("Download for " + url + "failed. Reason:")
         print(errorUrl.reason)
-
-    return data.read()
+        return False
+    else :
+        return data.read()
 
 
 if __name__ == "__main__":
